@@ -104,6 +104,164 @@ STL提供了大约100个实现算法的模版函数，比如算法for_each将为
 暂且举几个非常容易理解的程序源码：
 
 
+第三部分：
 
+50条忠告：（其中有几条觉得写的不够贴切，所以删了，发了余下的部分）
+
+ 
+
+1.把C++当成一门新的语言学习；
+
+2.看《Thinking In C++》，不要看《C++变成死相》；
+
+3.看《The C++ Programming Language》和《Inside The C++ Object Model》,不要因为他们很难而我们自己是初学者所以就不看；
+
+4.不要被VC、BCB、BC、MC、TC等词汇所迷惑——他们都是集成开发环境，而我们要学的是一门语言；
+
+5.不要放过任何一个看上去很简单的小编程问题——他们往往并不那么简单，或者可以引伸出很多知识点；
+
+6.会用Visual C++，并不说明你会C++；
+
+7.学class并不难，template、STL、generic programming也不过如此——难的是长期坚持实践和不遗余力的博览群书；
+
+8.如果不是天才的话，想学编程就不要想玩游戏——你以为你做到了，其实你的C++水平并没有和你通关的能力一起变高——其实可以时刻记住：学C++是为了编游戏的；
+
+9.看Visual C++的书，是学不了C++语言的；  
+
+16.把时髦的技术挂在嘴边，还不如把过时的技术记在心里；
+
+18.学习编程最好的方法之一就是阅读源代码；
+
+19.在任何时刻都不要认为自己手中的书已经足够了；
+
+20.请阅读《The Standard C++ Bible》(中文版：标准C++宝典)，掌握C++标准；
+
+21.看得懂的书，请仔细看；看不懂的书，请硬着头皮看；
+
+22.别指望看第一遍书就能记住和掌握什么——请看第二遍、第三遍；
+
+23.请看《Effective C++》和《More Effective C++》以及《Exceptional C++》；
+
+24.不要停留在集成开发环境的摇篮上，要学会控制集成开发环境，还要学会用命令行方式处理程序；
+
+25.和别人一起讨论有意义的C++知识点，而不是争吵XX行不行或者YY与ZZ哪个好；
+
+26.请看《程序设计实践》，并严格的按照其要求去做；
+
+27.不要因为C和C++中有一些语法和关键字看上去相同，就认为它们的意义和作用完全一样；
+
+28.C++绝不是所谓的C的“扩充”——如果C++一开始就起名叫Z语言，你一定不会把C和Z语言联系得那么紧密；
+
+29.请不要认为学过XX语言再改学C++会有什么问题——你只不过又在学一门全新的语言而已；
+
+30.读完了《Inside The C++ Object Model》以后再来认定自己是不是已经学会了C++；
+
+31.学习编程的秘诀是：编程，编程，再编程；
+
+32.请留意下列书籍：《C++面向对象高效编程（C++ Effective Object-Oriented Software Construction）》《面向对象软件构造(Object-Oriented Software Construction)》《设计模式（Design Patterns）》《The Art of Computer Programming》； 
+
+34.请把书上的程序例子亲手输入到电脑上实践，即使配套光盘中有源代码；
+
+35.把在书中看到的有意义的例子扩充；
+
+36.请重视C++中的异常处理技术，并将其切实的运用到自己的程序中；
+
+37.经常回顾自己以前写过的程序，并尝试重写，把自己学到的新知识运用进去；
+
+38.不要漏掉书中任何一个练习题——请全部做完并记录下解题思路；
+
+39.C++语言和C++的集成开发环境要同时学习和掌握；
+
+40.既然决定了学C++,就请坚持学下去，因为学习程序设计语言的目的是掌握程序设计技术，而程序设计技术是跨语言的；
+
+41.就让C++语言的各种平台和开发环境去激烈的竞争吧，我们要以学习C++语言本身为主；
+
+42.当你写C++程序写到一半却发现自己用的方法很拙劣时，请不要马上停手；请尽快将余下的部分粗略的完成以保证这个设计的完整性，然后分析自己的错误并重新设计和编写（参见43）；
+
+43.别心急，设计C++的class确实不容易；自己程序中的class和自己的class设计水平是在不断的编程实践中完善和发展的；
+
+44.决不要因为程序“很小”就不遵循某些你不熟练的规则——好习惯是培养出来的，而不是一次记住的；
+
+45.每学到一个C++难点的时候，尝试着对别人讲解这个知识点并让他理解——你能讲清楚才说明你真的理解了；
+
+46.记录下在和别人交流时发现的自己忽视或不理解的知识点；
+
+47.请不断的对自己写的程序提出更高的要求,哪怕你的程序版本号会变成Version 100.XX；
+
+48.保存好你写过的所有的程序——那是你最好的积累之一；
+
+49.请不要做浮躁的人；
+
+50.请热爱C++!
+
+第四部分：
+
+C++头文件一览 
+C、传统 C++
+
+#include <assert.h>　　　　设定插入点
+#include <ctype.h>　　　　字符处理
+#include <errno.h>　　　　 定义错误码
+#include <float.h>　　　　浮点数处理
+#include <fstream.h>　　　文件输入／输出
+#include <iomanip.h>　　　 参数化输入／输出
+#include <iostream.h>　　　数据流输入／输出
+#include <limits.h>　　　　定义各种数据类型最值常量
+#include <locale.h>　　　　定义本地化函数
+#include <math.h>　　　　　定义数学函数
+#include <stdio.h>　　　　定义输入／输出函数
+#include <stdlib.h>　　　　定义杂项函数及内存分配函数
+#include <string.h>　　　　字符串处理
+#include <strstrea.h>　　　基于数组的输入／输出
+#include <time.h>　　　　　定义关于时间的函数
+#include <wchar.h>　　　　 宽字符处理及输入／输出
+#include <wctype.h>　　　　宽字符分类
+
+标准 C++　
+
+#include <algorithm>　　　  通用算法
+#include <bitset>　　　　　 位集容器
+#include <cctype>
+#include <cerrno>
+#include <clocale>
+#include <cmath>
+#include <complex>　　　　 复数类
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <deque>　　　　　 双端队列容器
+#include <exception>　　　 异常处理类
+#include <fstream>
+#include <functional>　　　 定义运算函数（代替运算符）
+#include <limits>
+#include <list>　　　　　　 线性列表容器
+#include <map>　　　　　　 映射容器
+#include <iomanip>
+#include <ios>　　　　　　基本输入／输出支持
+#include <iosfwd>　　　　输入／输出系统使用的前置声明
+#include <iostream>
+#include <istream>　　　　 基本输入流
+#include <ostream>　　　　 基本输出流
+#include <queue>　　　　　  队列容器
+#include <set>　　　　　　 集合容器
+#include <sstream>　　　　 基于字符串的流
+#include <stack>　　　　　 堆栈容器　　　　
+#include <stdexcept>　　　 标准异常类
+#include <streambuf>　　　底层输入／输出支持
+#include <string>　　　　　字符串类
+#include <utility>　　　　 通用模板类
+#include <vector>　　　　 动态数组容器
+#include <cwchar>
+#include <cwctype>
+
+C99 增加
+
+#include <complex.h>　　复数处理
+#include <fenv.h>　　　　浮点环境
+#include <inttypes.h>　　整数格式转换
+#include <stdbool.h>　　 布尔环境
+#include <stdint.h>　　　整型环境
+#include <tgmath.h>　　通用类型数学宏
 
 
