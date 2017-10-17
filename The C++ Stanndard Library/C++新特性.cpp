@@ -1,6 +1,7 @@
 C++11语言新特性
 
 Template表达式内的空格
+
     “在两个template表达式的闭符之间放一个空格“的要求已经过时了：
     vector<list<int> >;  //ok in each C++ version
     vector<list<int>>;   //ok since C++11
@@ -262,7 +263,119 @@ class X{
     X(X&& rvalue);                 //move constructor
     ...
 };
+举个例子，string的move构造函数只是将既有的内部字符数组（existing internal character array) 赋予 (assign)新对象，而非建立一个新array然后复制所有元素。
+同样情况也适用于所有集合class:不再为所有元素建立一份拷贝，只需将内部内存（internal memory ) 赋予新对象就行。如果move构造函数不存在，copy构造函数就会被用上。 
+    另外，你必须确保对于被传对象（其value被“偷取”）的任何改动---特别是折构---都不至于冲击新对象（如今拥有value)的状态。因此，你往往必须清除被传入的实参的内容，
+例如将nullptr赋值给“指向了容器元素”的成员函数。 
+将“move semantic被调用”的对象的内容清除掉，严格说来并非必要，但不这么做的话会造成整个机制几乎失去用途。事实上，一般而言，C++标准库的class保证了，在一次 move之后，
+对象处于有效但不确定的状态。也就是说，你可以在move之后对它赋予新值， 但当前值是不确定的。STL容器则保证了，被搬移内容者，搬移后其值为空。 
+同样地，任何 nonlrivial class 都该同时提供一个 copy assignment 和一个move assignment 操作符：
 
+class X{
+    public:
+        X& operator = (const X& lvalue);//copy assignment operator
+        X& operator = (X&& rvalue);     //move assignment operator
+        ...
+};
+对于string和集合，上述操作符可以简单交换（swapping)内部内容和资源就好。然而你也应该清除*this的内容，因为这个对象可能持有资源（如lock),因而最好很快释放它们。 
+再强调一次，move semantic并不要求你那么做，但这是C++标准库容器所提供的一种优越质量。
+    最后，请注意两个相关议题：（1) rvalue和lvalue reference的重载规则：（2)返回rvalue referencee。
+
+Rvalue 和 Lvalue Reference 的重载规则 
+
+Rvalue 和 lvalue 的重载规则(overloading rule)如下
+•如果你只实现 
+    void foo(X&)； 
+    而没有实现void foo(X&&),行为如同C++98: foo()可因lvalue但不能因rvalue被调用。 
+•如果你实现 
+    void foo(const X&)； 
+    而没有实现void foo(X&&),行为如同C++98: foo()可因lvalue也可因rvalue被调用。
+•如果你实现 
+    void foo(X&)； 
+    void foo(X&&)； 
+或 
+    void foo(const X&)； 
+    void foo(X&&)； 
+    你可以区分“为rvalue服务”和“为lvalue服务”。“々rvakie服务”的版本被允I午且应 该提供move语义。也就是说，它可以“偷取”实参的内部状态和资源。 
+•如果你实现 
+    void foo(X&&)； 
+    但既没有实现void foo(X&)也没有实现void foo(const X&), foo()可因rvalue被调用，但当你尝试lvalue调用它，会触发编译错误。因此，这里只提供move语义。
+这项能力被程序库中诸如unique pointer 、file stream 或 string stream所用。 
+以上意味着，如果class未提供move语义，只提供惯常的copy构造函数和copy assignment 操作符，rvalue reference可以调用它们。因此，std::move()意味着“调用move语义（若有提供的话），否则调用copy语义”。 
+
+返回 Rvalue Reference 
+
+你不需要也不应该move()返回值。C++standard指出，对干以下代码： 
+X foo () 
+{
+    X x;
+    ...
+    return x;
+}
+保证有下列行为： 
+•如果X有一个可取用的copy成move构造函数，编译器可以选择略去其中的copy版本。 这也就是所谓的(named) return value optimization/*返回值优化*/((N)RVO)，这个特性其至在C++11之前就获得了大多数编译器的支持。 
+•否则，如果X有一个move构造函数，X就被moved  (搬移)。 
+•否则，如果X有一个copy构造函数，X就被copied  (复制)。 
+•否则，报出一个编译期错误（compile-time error)。 
+也请注意，如果返回的是个local nonstatic对象，那么返回其rvalue reference是不对的：
+X&& foo () 
+{
+    X x;
+    ...
+    return x;   //ERROR: return reference to nonexisting object
+}
+是的，rvalue reference也是个reference，如果返回它而它指向（referring to) local对象，意味着你返回一个reference却指向一个不再存在的对象。是否对它使用std::move()倒是无关紧要。
+
+新式字符串字面常量
+
+自C++11起，你可以定义raw string/*初始字符串*/和multibyte/wide-character等字符串字面常量。
+
+Raw String Literal
+Raw string允许我们定义字符序列（character sequence)，做法是确切写下其内容使其成为一 个raw character sequence。于是你可以省下很多用来装饰特殊字符的escape/*泄露*/符号。 
+Raw string以R"(幵头，以)"结尾，可以内含line break/*换行符*/。例如一个用来表示“两个反斜线和一个n” 的寻常字面常量可定义如下：
+
+"\\\\n"//转义字符 \\n转义
+也可以定义它为如下raw string literal:
+R"(\\n)"
+如果要在raw string内写出)“,可使用定义符（delimiter）。因此，一个raw string的完整语法是R“delim(...)delim”，其中delim是个字符序列(character sequence)，最多16个基本字符，
+不可含反斜线（backslash）、空格（whitespace）和小括号（parenthesis）。
+
+举个例子，下面的raw string literal 
+    R"nc(a\ 
+        b\nc()" 
+        )nc"； 
+等同于以下的寻常string literal： 
+"a\\\n           b\\nc()\"\n            " 
+这样的string内含一个a、一个反斜线、一个新行字符（newline)、若干空格（space)、一个b、一个反斜线、一个n、一个c、一对小括号、一个双引号、一个新行字符，以及若干空格。
+    定义正则表达式（regular expression）时raw string literal特别有用。
+
+编码的（Encoded) String Literal //字符串字面值
+
+只要使用编码前缀(encoding prefix),你就可以为string literal定义一个特殊的字符编码 (character encoding)下面这些编码前缀都预先定义好了 ： 
+u8定义一个UTF-8编码。UTF-8 string literal以UTF-8编定的某个给定字符起头，字符类型为 const char。 
+u定义一个string literal,带着类型为chiarl6_t的字符。 
+U定义一个string literal，带着类型为char32_t的字符。 
+L定义一个wide string literal,带着类型为wchar_t的字符。 
+例如： 
+L” hello ” //defines.‘hello ‘‘aswchar_t stringliteral 
+Raw string幵头那个R的前面还町以放置一个编码前缀。 
+
+
+关键字 noexcept
+
+C++11提供了关键字noexcept，用来指明某个函数无法----或不打算---抛出异常。例如： 
+void foo () noexcept； 
+声明了 foo()不打算拋出异常。若有异常未在foo()内被处理---亦即如果foo()拋出异常---程序会被终止，然后std::terminate()被调用并默汄调用std::abort()//程序被终止。
+
+
+关键字 constexpr
+
+自C++11起，constexpr可用来让表达式核定于编译期。例如：
+constexpr int square(int x)
+{
+    return x*x;
+}
+float a [square (9)]； // OK since C++11: a has 81 elements
 
 
 
