@@ -199,7 +199,7 @@ std::initializer_list<>提供了成员函数begin()和end（）。
     60
 
 Move语言和Rvalue Reference
-
+//节省空间和提升性能的一个很好的方法
 C++11的一个最重要的特性就是，支持move semantic（搬迁语义）。这项特性更进一步进入了C++
 主要设计目标内，用以避免非必要拷贝（copy）和临时对象（temporary）。
     void createAndInsert(std::set<X>& coll)
@@ -208,6 +208,65 @@ C++11的一个最重要的特性就是，支持move semantic（搬迁语义）�
         ...
         coll.insert(x); //insert it into the passend collection
     }
+在这里我们将新对象插入集合（collection）中，后者提供一个成员函数可为传入的元素建立一份内部拷贝（internal copy）:
+namespace std{
+    template <typename T,...> class set {
+        public:
+         ...insert (const T& v);    //copy value of v
+         ...
+    };
+}
+这样的行为是有用的，因为集合（collection）提供value semantic及安插“临时对象”（temmporay object）或
+“安插后会被使用或被改动的对象”的能力。
+X x;
+coll.insert(x);         //inserts copy of x                                     插入x
+...
+coll.insert(x+x);       //inserts copy of temporary rvalue                      插入拷贝临时右值
+...
+coll.insert(x);         //inserts copy of x(although x is not used any longer)  重复添加
+
+然而，对于后两次x安插动作，更好的是指出“被传入值（特就是x+x的和以及x）不再被调用者使用”，
+如此一来coll内部就无须为它建立一份copy且“某种方式move其内容进入新建元素中”。当x的复制成本高昂的时候--例如
+它是个巨大的string集合--这会带来巨大的效能提高。
+    自C++11起，上述行为成为可能，然而程序猿必须自行指明“move是可行的，除非被安插的那个临时对象还会被使用”。
+虽然编译器自身也有可能找出这个情况（在某些浅薄无奇的情况下），允许程序猿执行这项工作毕竟可使这个特性被用于
+逻辑上任何适当之处。先前的代码只需简单改成这样：
+X x;
+coll.insert(x);         //insert copy of x(OK,x is still used)
+...
+coll.insert(x+x);       //moves(or copies) contents of temporary rvalue
+...
+coll.insert(std::move(x));      //moves(or copies) contents of x into coll
+
+有了声明于<utility>的std::move()，x可被moved而不再被copied。然而std::move()自身并不做任何moving工作，
+它只是将其实参转成一个所谓的 rvalue reference，那是一种被声明为X&&的类型。这种新类型主张rvalue（不具名的
+临时对象只能出现于复制操作的右侧）可被改动内容。这份契约的含义是，这是个不再被需要的（临时）对象，所以你可以
+“偷”其内容和/或其资源。
+    现在，我们让集合（collection）提供一个insert()重载版本，用以处理这些rvalue reference:
+    namespace std{
+        template<typename T,...>class set{
+            public:
+             ...insert(const T& x);     //for lvalues: copies the value
+             ...insert(T&& x);          //for rvalues: moves the value
+             ...
+        };
+    }
+我们可以优化这个针对rvalue reference的重载版本，令它“偷取”x的内容。为了这么做，需要type of x的帮助，
+因为只有type of x拥有接近本质的机会和权利。举个例子，你可以运用internal array和pointer of x来初始化备案差的元素。
+如果class x 本身是个复杂类型，原本你必须为它注意赋值元素，现在这么做则会带来巨大的效能改善。欲初始化新的内部元素，
+我们只需调用class X提供的一个所谓move构造函数，它“偷取”传入的实参值，初始化一个新的元素。所有复杂类型都应该提供这样一个
+特殊构造函数---C++ 标准库也提供了---用来将一个既有元素的内容搬迁（move）到新元素中:
+class X{
+    public:
+    X(const X& lvalue);            //copy constructor
+    X(X&& rvalue);                 //move constructor
+    ...
+};
+
+
+
+
+
 
 
 
