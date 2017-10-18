@@ -36,3 +36,25 @@ Callable Object (可被调用的对象)
         std::async(&C::memfunc,&c,42,77);       //calls: c.memfunc(42,77)
         std::async(&C::memfunc,sp,42,77);       //calls: sp->memfunc(42,77)
     }
+    如你所见，甚至可使用smart pointer (见5.2节第76贞）传递某对象并指明其将被调用的成员函数。本例出现的std::bind()将在10.2.2节第487页详述,std::async()将在18.1节 第946豇详述。 
+    如果想声明 callable object，一般而言可使用class std::function<>(详见 5.4.4 节第 133 页）。
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
