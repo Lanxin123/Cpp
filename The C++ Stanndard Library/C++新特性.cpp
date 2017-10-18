@@ -434,15 +434,334 @@ std::vector<int,MyAlloc<int>>   coll;
 自C++11起，function template 可拥有默认的 template 实参。此外，local type可被当作template实参。 
 
 
+Lambda
+
+C++11引入了 lambda,允许inline函数的定义式被用作一个参数，或是一个local对象。 
+
+所谓lambda是一份功能定义式，可被定义于语句（statement)或表达式（expression)内部。因此你可以拿lambda当作inline函数使用。 
+最小型的lambda函数没有参数，什么也不做，如下： 
+[]{ 
+std::cout << "hello lambda" <<  std::endl; 
+} 
+可以直接调用它： 
+{ 
+std::cout <<  "hello lambda11"  << std: :endl; 
+};
+l();    
+
+如你所见，lambda总是由一个所谓的lambda introducer引入：那是一组方括号，你可以在其内指明一个所谓的capture，用来在lambda内部访问“nonstatic外部对象”。
+如果无须访问外部数据，这组方括号可以为空，就像本例所示。Static对象，诸如std::cout，是可被使用的。 
+在lambda introducer和lambda body之间，你可以指明参数或mutable，成一份异常明细（exception specification)或attribute specifier以及返回类型。
+所有这一切都可有可无，但如果其中一个出现了，参数所需的小括号就必须出现。因此lambda语法也可以是 
+[...]{...}
+或 
+[...](...) 
+Lambda可以拥有参数，指明于小括号内，就像任何函数一样： 
+auto l = [] (const std::stringft s) { 
+std::cout «  s «  std::endl； 
+}； 
+l("hello lambda") ；    //prints "hello lambda" 
+然而请注意，lambda不可以是template。你始终必须指明所有类型。 
+Lambda也可以返回某物。但你不需要指明返回类型，该类型会根据返回值被推导出来。例如下面的lambda的返回类型是int: 
+[]{ 
+return 42; 
+}
+如果一定想指明一个返回类型，可使用新式C++语法，一般函数也可以用它。例如下面的lambda返回42.0: 
+[] () -> double { 
+return 42; 
+}
+这么一来你就必须指明返回类型，放在实参所需的小括号以及字符->之后。 
+在参数和返回类型指示(return specification)或函数体之间，你也可以写出一份异常明细（exceptionspecification),就像你能够为一般函数所做的那样。然而目前已不鼓励为函数撰写异常明细。 
+Capture (用以访问外部作用域） 
+在lambda introducer (每个lambda最开始的方括号）内，你可以指明一个capture用来处理外部作用域内未被传递为实参的数据： 
+[=]意味着外部作用域以by value方式传递给lambda。因此当这个lambda被定义时，你 可以读取所有可读数据（readable data)，但不能改动它们。 
+[&]意味着外部作用域以by reference方式传递给lambda。因此当这个lambda被定义时， 你对所有数据的涂写动作都合法，前提是你拥有涂写它们的权力。 
+也可以个别指明lambda之内你所访问的每一个对象是by value或by reference。因此你可以对访问设限，也可以混合不同的访问权力。例如下面这些语句： 
+int x=0; 
+int y=42; 
+auto qqq = [x, &y] { 
+std::cout    "x: "  << x << std::endl； 
+std::cout    "y: "  << y << std::endl; 
+++y;  //OK 
+}； 
+x = y = 77; 
+qqq(); 
+qqq(); 
+std::cout << "final y: " << y << std::endl; 
+
+会产生以下输出：
+
+x:0 
+y:77 
+x:0 
+y:78 
+final y: 79 
+由于x是因by value而获得一份拷贝，在此lambda内部你可以改动它，但若调用++x是通不过编译的。y以by reference方式传递，所以你可以涂写它，并且其值的变化会影响外部; 所以调用这个lambda 二次，会使指定值77被累加。 
+你也可以写[=,&y]取代[x, &y],意思是以by reference方式传递y,其他所有实参则以by value方式传递。 
+为了获得 passing by value 和 passing by reference 混合体，你可以声明 lambda 为 mutable。 下例中的对象都以by value方式传递，但在这个lambda所定义的函数对象内，你有权力涂写传入的值。例如： 
+int id = 0; 
+auto f = [id] () mutable { 
+    std::cout << "id:" << id <<  std::endl; 
+    ++id;    //OK 
+};
+id = 42;
+f()； 
+f()； 
+f(); 
+std :: cout << id << std::endl； 
+会产生以下输出： 
+id: 0 
+id: 1 
+id: 2 
+42 
+你可以把上述lambda的行为视同下面这个function object ： 
+class { 
+private： 
+    int id;  //copy ofoutsideid 
+public: 
+    void operator() () { 
+    std::cout <<"id: " << id << std::endl;
+    ++id;    //OK
+    }
+};
+
+由干mutable的缘故，operator ()被定义为一个non-const成员函数，那意味着对id的涂写是可能的。所以，有了 mutable，lambda变得stateful,即使slate是以by value方式传递。 
+如果没有指明mutable (—般往往如此)，operator ()就成为一个const成员函数，那么对于对象你就只能读取，因为它们都以by value方式传递。有一个例子使用 lambda并使用mutable,该处会讨论可能出现的问题。 
+
+Lambda的类型 
+
+Lambda的类型，是个不具名function object (或称functor)。每个lambda表达式的类型是 独一无二的。因此如果想根据该类型声明对象，可借助于template或auto。
+如果你实在需要写下该类型，可使用decltype，例如把一个lambda作为hash function或ordering准则或sorting准则传给associative (关联式）容器或unordered (不定序）容器。 
+或者你也可以使用C++标准库提供的std: :function<> class template,指明一个一般化类型给 functional programming使用。这个 class template 提供了 “明确指出函数的返回类型为lambda”的唯一办法： 
+
+// lang/lambdal. cpp 
+#include<functional> 
+#include<iostream> 
+std::function<int(int,int)> returnLambda () 
+{
+    return [] (int x,int y)
+    {
+        return x*y;        
+    }
+}
+
+int main()
+{
+    auto lf = returnLambda();
+    std::cout << lf(6,7) <<std::endl;
+}
+
+程序的输出当然是:
+    42
 
 
+关键字 decltype 
+
+新关键字decltype可让编译器找出表达式（expression) 类型。这其实就是常被要求的 typeof的特性体现。只不过原有的typeof缺乏一致性又不完全，C++11 才引入这么一个关键字。举个例子： 
+std::map<std:：string,float> coll; 
+decltype(coll)::value_type elem; 
+decltype的应用之一是声明返回类型（见下），另一个用途是在metaprogramming (超编程）或用来传递一个lambda类型。 
+
+新的函数声明语法（New Function Declaration Syntax) 
+
+有时候，函数的返回类型取决于某个表达式对实参的处理。然而类似 
+    template <typename T1, typename T2> 
+    decltype(x+y) add(Tl x, T2 y)； 
+在C++11之前是不可能的，因为返回式所使用的对象尚未被引入，或未在作用域内。 
+但是在C++11，你可以将一个函数的返回类型转而声明于参数列之后： 
+template <typename T1, typename T2> 
+auto add(T1 x, T2 y) -> decltype(x+y)； 
+这种写法所采用的语法，和 “ 为lambda声明返回类型”是一样的。 
+
+带领域的（Scoped)   Enumeration 
+
+C++11 允许我们定义 scoped enumeration   又称为 stronge numeration 成enumeration class 这是C++ enumeration value ( 或称 enumeroator)的一个较干净的实现 。例如： 
+    enum class Salutation :char {mr, ms, co, none}; 
+重点在于，在enum之后指明关键字class。 
+    Scoped enumeration 有以下优点： 
+•绝不会隐式转换至/自int。 
+•如果数值（例如mr)不在enumeration被声明的作用域内，你必须改写为Salutation::mr。 
+•你可以明显定义低层类型（underlying type,本例是char)并因此获得一个保证大小（如果你略去这里的“：char”，默汄类型是int)。 
+•提前声明（forward declaration)  enumeration type 是可能的，那会消除 “为了新的enumerations value 而重新编译”的必要---如果只有类型被使用的话。 
+
+注意，有了 type trait std：：underlying-type，你可以核定（evaluate) 一个 enumeration type 的低层类型。 
+标准异常的差错状态值（error condition value)也是个scoped enumerator。
+
+新的基础类型（New Fundamental Data Type) 
+以下的新式基本数据类型，定义于C++11: 
+•  charl6_t 和 char32_t 
+•  long long 和 unsigned long long 
+•  std::nullptr_t 
 
 
+虽旧犹新的语言特性 
 
+虽然C++98已超过10岁，程序员仍然会对其中某些语言特性感到惊讶。 
 
+Nontype Template Parameter (非类型模板参数） 
 
+Type parameter (类型参数）之外，我们也可以为template使用nontype parameter (非类型参数)。这样的参数亦被视为template类型的一部分。例如对于标准的class bitset<>，
+你可以传递bit个数作为template实参。下面的语句定义了两个bitfield: 一个带有32 bit,另一个带有 50 bit。 
+bitset<32> flags32;    //bitsetwith32bits 
+bitset<50> flags50;   //bitsetwith50bits 
+这些bitset有着不同的类型，因为它们使用不同的template实参。因此你不可对上述二者迸 行賦值或比较，除非它们之间有一个相应的类型转换。 
+Default Template Parameter (模板参数默认值） 
+Class template可以拥有默认实参。例如下面的声明式允许我们在声明class MyClass对象时 指定1或2个template实参： 
+template <typename T, typename container = vector<T>>
+class  MyClass； 
+如果你只传入一个实参，第二实参会采用默认值：
+    MyClass<int> x1;    //equivalentto:MyClass<int,vector<int>>
+注意，默认的template实参可以其前一个实参为依据而定义。 
 
+关键字typename 
 
+关键字typename用来指明紧跟其后的是个类型。考虑下面的例子： 
+template <typename T> 
+class MyClass { 
+    typename T::SubType * ptr； 
+    ...
+}； 
+在这里typename用来阐明 “SubType是个类型，定义于classT内”。因此ptr是个pointer， 指向类型T::SubType。如果没有typename, SubType会被视为一个static成员，于是 
+T：：SubType * ptr 
+被视为“类型为T的数值SubType” 乘以ptr。 
+基于“SubType必须是个类型”这样的限定，任何被用来替换T的类型，都必须提供一 个内层类型SubType。例如，以类型q作为此处的一个template实参的唯一可能是，类型Q有个内层类型SubType: 
+class Q { 
+    typedef int SubType；
+    ...
+};
+MyClass<Q> x;    //OK 
+此例之中，MyClass<(J>的ptr成员将会成为一个pointer toint。内层类型也可以是个抽象 数据类型（abstract data t y p e ) , 例如是个 class: 
+class Q { 
+    class SubType； 
+    ...
+}； 
+注意，如果你需要指明“template的某个标识符（identifier)其实是个类型”，那么总是需要 typename,即便它“如果不是个类型就毫无意义”。因此，C++的一般性规则就是，template 内的任何标识符都被视为一个value，除非为它加上typename。 
+此外在template声明式中typename也可被用来取代class: 
+template <typename T> class MyClass； 
+
+Member Template (成员模板） 
+
+Class的成员函数口了以是template。然而 member template不可以是virtual。举个例子： 
+
+class MyClass { 
+template <typename T> 
+void f(T); 
+}； 
+上述的MyClass::f 声明了 “一组”成员函数，其参数可以是任意类型。你可以传递任何实参给它们，只要该实参的类型提供“f()用到的所有操作”。 
+这一语言特性往往被用来支持class template内的成员之间的自动类型转换。例如下面 的定义式中，assign()的实参x必须和“调用assign()” 的那个对象的类型完全相同： 
+template <typename T> 
+class MyClass {
+private: 
+    T value； 
+public: 
+    void assign (const MyClass<T>& x) { //x must have same type as*this 
+    value = x.value;
+...
+}; 
+
+如果assign()调用者和其实参（都是对象）的template类型不同，是不可以的，即便你提供了那些类型之间的自动转换： 
+void f() 
+{
+    MyClass<double> d; 
+    MyClass<int> i； 
+    d.assign(d) ；  //OK 
+    d.assign(i) ；  //ERROR: i is MyClass<int> 
+                    //       but MyClass<double> is required
+}
+但如果你为成员函数提供一个不一样的template类型，你就可以从“必须精确吻合”的规则中解脱。现在，这个成员函数的template实参可具备任何template类型，只要该类型“可被赋值”： 
+template <typename T> 
+class MyClass { 
+private: 
+    T value; 
+public:
+    template <typename X>               //member template
+    void assgin(const MyClass<X>& x)    //allows different template types
+    {
+        value = x.getValue();
+    }
+    T getValue() const 
+    {
+        return value;
+    }
+    ...
+};
+void f()
+{
+    MyClass<double> d;
+    MyClass<int> i;
+
+    d.assign(d);    //OK
+    d.assign(i);    //OK(int is assginable to double)
+}
+
+注意，现在assign()的实参x,其类型不同于*this的类型，因此你不可直接取用 MyClass()的private和protected成员。取而代之，你必须使用诸如本例getValue()之类的东西。 
+Member template的一个特殊形式是命谓template构造函数。这种东西通常被提供用于 “对象被复制时给予隐式类型转换”的能力。注意，template构造函数并不压制copy构造函数的隐式声明。
+如果类型完全吻合，隐式的copy构造函数会被生成出来，并被调用。例如: 
+template <typename T> 
+class MyClass { 
+public: 
+//copy constructor with implicit type conversion 
+//-does not suppress implicit copy constructor 
+template <typename U> 
+MyClass   ( const  MyClass<U>& x)；
+...
+};
+void f()
+{
+    MyClass<double> xd;
+    ...
+    MyClass<double> xd2(xd);    //calls implicitly generated copy constructor
+    MyClass<int>    xi(xd);     //calls template constructor
+    ...
+}
+
+这里，xd2 的类型完全相同于xd，因此其初始化是通过被隐式生成的copy构造函数完成。 xi的类型不同于xd，因此其初始化是通过template构造函数完成。所以，如果你实现出一个template构造函数，
+请不要忘记也提供一个default构造函数---如果后者的默认行为不符合你的需要。还有一个member template的例子。 
+
+Nested (嵌套式）Class Template 
+
+嵌套类(Nested class)也可以是 template:
+template <typename T> 
+class MyClass {
+    ... 
+    template <typename T2> 
+    class NestedClass; 
+    ...
+};
+
+基础类型的明确初始化（Explicit Initialization for Fun-damental Type) 
+
+如果你使用“一个明确的构造函数调用，但不给实参”这样的语法，基础类型会被设定初值为0:
+    int i1;             //undefined value
+    int i2 = int();     //initialized with zero
+    int i3{};           //initialized with zero(since C++11)
+这个特性使你得以写出“确保无论任何类型，其值都有一个确凿的默认值”的template code。例如下面的函数中，初始化机制保证了 “ x 如果是基础类犁，会被初始化为0”： 
+template <typename T> 
+void f() 
+{ 
+    T x = T();
+    ... 
+} 
+如果一个template强迫设K初值为0，其值就是所谓的zero initialized，否则就是default initialized。 
+
+main ( ) 定义式 
+
+我还想澄清一个重要而常被误解的核心语言点：唯一 “正确且其移植性”的main()。拫据C++标准，main()只有两种定义式具备可移植性，那就是 
+int main()
+{
+    ...
+} 
+和
+int main(int argc,char* argv[])
+{
+    ...
+}
+
+其中的argv，也就足命令行实参（command-line argument)所形成的array，也可定义为 char**。注意其返回类型必须是int。 
+你可以（但非必要）以一个return语句终结main()。不同于C, C++ 定义了一个隐晦的 
+    return 0; 
+于main()终点。这意味着任何程序离幵main()时可以不写return语句。0以外的任何值都代表某种失败。为此，本书中我的所有例子都没在main()终点放上一个return语句。 
+如果不想以“ main()返回”方式结束C++程序，通常应该调用exit()、quick_exit() (C++11之后）或terminate()。
 
 
 
