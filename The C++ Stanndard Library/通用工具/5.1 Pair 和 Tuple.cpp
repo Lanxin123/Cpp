@@ -215,6 +215,41 @@ int main()
     事实上这里的pair p被赋值给一个tuple，后者的第二value是个reference，指向c。
 
 
+Pair运用实例 
+    C++标准库大量使用pair。例如（unordered)map和multimap容器的素类型便是pair,也就是一对key/value。map和multimap的一般性描述见7.8节第331页。6.2.2节第179页有 一个pair类型的运用实例。 
+    C++标准库中凡“必须返回两个value” 的函数也都使用pair对象。
+
+Tuple(不定数的值组)
+
+    Tuple是TR1引入的东西，它扩展了pair的概念，拥有任意数量的元素。也就是说，tuple 呈现出一个异质元素列(heterogeneous list of elements),其中每个类型都可以被指定，或来自编译期推导。 
+    然而，由干TR1用的是C++98 语言特性，也就不可能定义出一个“参数个数不定”的 template。基于这个原因，实现必须具体指明“一个tuple吋拥有的”所有可能的元素个数。 TR1对此的建议是至少10个实参，这意味着tuple往往被定义如下，甚至某賤实现会提供 更多的template参数： 
+    template <typename TO = ..., typename Tl =…，typename T2 =..., 
+            typename T3 =     typename T4 = ..., typename T5 =..., 
+            typename T6 = ..., typename T7 = ..., typename T8 =..., 
+            typename T9 =...> 
+    class tuple； 
+    这显示，class tuple拥有至少10个类型各异的template参数，每个都带有实现赋予的默认类型。未用到的tuple元素也有个默认类型，但没有作用。这实际上就是variadic template的仿效品，只不过又累赘又有限制。 
+    来到C++11，variadic template被引入进来，使template得以接受任何数读的template实参。于是，出现在<tuple>中的class tuple声明式现在就被简化如下： 
+    namespace std { 
+        template <typename... Types> 
+        class tuple；
+    } 
+
+Tuple的操作
+
+    原则上，tuple掊口十分直观： 
+    •通过明白的声明，或使用便捷函数make_tuple(),你可以创建一个tuple。 
+    •通过 get<>() function template,你可以访问tuple的元素。 
+    下面是其接口的一个基本示例：
+
+
+
+
+
+
+
+
+
 
 
 
