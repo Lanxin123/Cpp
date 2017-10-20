@@ -372,6 +372,117 @@ Tuple和初值列（Initializer List）
 
         foo(42);                    //ERROR: explicit conversion to typle<> required
         foo(make_tuple(42));        //OK
+    然而，这种情况下,当使用初值列(initializer list)定义tuple内容时就会呈现一种必然结果。举个例子，你不可以使用赋值语法将某个tuple初始化，因为那会被视为一个隐式转换： 
+    std::tuple<int,double> tl(42,3.14) ；  //OK,old syntax 
+    std::tuple<int,double> t2{42,3.14};   //OK, new syntax 
+    std::tuple<int,double> t3 = {42,3.14}; //ERROR 
+    此外，你不可以将初值列传至“期望获得一个tuple” 的地方： 
+    std::vector<std::tuple<int,float>> v { {1,1.0}, {2,2.0} >; //ERROR 
+    
+    std::tuple<int,int,int> foo() {
+        return { 1, 2, 3 }; //ERROR 
+        }
+    注意，上述做法对千pair<>和容器（除了array<>)是行得通的： 
+    std::vector<std::pair<int,float>> vl{ {1,1.0}, {2,2.0} }; //OK 
+    std::vector<std::vector<float>>  v2{ {1,1.0}, {2,2.0} }; //OK 
+    std::vector<int> foo2() { 
+        return { 1, 2, 3};    //OK 
+        } 
+    但对于tuple,你必须明确地将初值转为一个tuple (如运用make_tuple())： 
+    std::vector<std::tuple<int,float v { std::make_tuple(1,1.0), 
+    std::make.tuple(2,2.0) }; //OK 
+    
+    std::tuple<int,int,int> foo() { 
+        return std: :make.tuple(1,2,3); // OK 
+    }
+
+其他的Tuple特性
+    有些辅助函数是特别为tuple而设计的，特别是为了支持泛型编程：
+    tuple_size<tupletype>::value 可获得元素个数。 
+    tuple_element<idx, tupletype>::type 可取得第idx个元素的类型(也就是 get()返回值的类型)。 
+    tuple_cat()可将多个tuple串接成一个tuple。 
+    下面的例子示范了如何使用tuple_size<>和tuple_elemeat<>: 
+        typename std::tuple<int.float,std::string〉 TupleType； 
+        
+        std::tuple_size<TupleType> :: value  //yields 3 
+        std::tuple_element<l,TupleType>: :type  //yields float 
+    你可以使用tuple_cat()串接所有形式的tuple，甚至包括pair<>: 
+        int n; 
+        auto tt = std::tuple_cat (std::make_tuple(42,7.7,"hello"), 
+                                        std::tie(n)); 
+    这里的tt成为一个tuple,拥有众多tuple的所有元素，即便最后的元素是个reference to n
+
+Tuple 的输入/输出
+
+    tuple class最初公幵于Boost程序库。在那儿，tuple可以将其元素写至output stream,但C++标准库并不支持这个性质。
+    如果你拥有以下头文件，就可以使用标准输出操作符 <<打印任何tuple: 
+    #include "stdafx.h"
+    #include <tuple>
+    #include <iostream>
+    using namespace std;
+
+    int main()
+    {
+	    //helper:print element with index IDX of tuple with MAX elements
+	    template<int IDX, int MAX, typename... Args>
+	    struct PRINT_TUPLE
+	    {
+		    static void print(std::ostream& strm, const std::tuple<Args...>& t)
+		    {
+			    strm << std::get<IDX>(t) << (IDX + 1 == MAX > " " : ",");
+			    PRINT_TUPLE<IDX + 1, MAX, Args...>::print(strm, t);
+		    }
+	}   ;
+
+	    //partial specialization to end the recursion
+	    template <int MAX, typename... Args>
+	    struct  PRINT_TUPLE<MAX, MAX, Args...>
+	    {
+		    static void print(std::ostream& strm, const std::tupleArgs... > & t)
+		    {
+
+		    }
+	    };
+
+	    //out operator for tuples
+	    template<typename... Args>
+	    std::ostream& operator<<(std::ostream& strm,
+		    const std::tuple<Args...>)
+	    {
+		    strm << "[";
+		    PRINT_TUPLE<0, sizeof...(Args), Args...>::print(strm, t);
+		    return strm << "]";
+	    }
+    }
+    这段代码大量运用template metaprogramming (模板超编程），在编译期递归迭代（recursively iterate) tuple的所有元素。
+    每次调用PRINT_TUPLE<>::print()就打印出一个元素，然后调用相同函数打印下一个元素。一个偏特化(partial specialization)版本
+    (其“当前索引 IDX”和“tuple内的元素个数MAX“相等)用来终结递归调用。举个例子，下面这个程序:
+
+    #include "parinttuple.hpp"
+    #include <tuple>
+    #include <iostream>
+    #include <string>
+    using namespace std;
+
+    int main()
+    {
+        tuple<int,float,string> t(77,1.1,"more light");
+        cout<<"io:"<<t<<endl;
+    }
+    可获得以下输出:
+        io:[77,1.1,more light]
+    其中的输出表达式(output expression)
+        cout<<t
+    调用的是
+        PRINT_TUPLE<0,3,Args...>::print(cout,t);
+    
+tuple和pair转换
+    正如表5.2所列，你可以拿一个pair作为初值，初始化一个双元素tuple，也可以将一个双元素tuple，也可以讲一个pair赋值给一个双元素tuple。
+    将一个pair赋值给一个双元素tule。
+    注意，其他类型也可能提供一个tuple-like接口。事实上class pair<>he class array<>就是如此。
+
+
+
 
 
 
