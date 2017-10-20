@@ -242,11 +242,136 @@ Tuple的操作
     •通过 get<>() function template,你可以访问tuple的元素。 
     下面是其接口的一个基本示例：
 
+#include "stdafx.h"
+#include <tuple>
+#include <iostream>
+#include <complex>
+#include <string>
+using namespace std;
 
+int main()
+{
+	//create a four-element tuple
+	//-elements are initialized with default value(0 for fundamental types)
+	tuple<string, int, int, complex<double>> t;
 
+	//create and initialize a tuple explicitly
+	tuple<int, float, string> t1(41, 6.3, "nico");
 
+	//"iterate" over elements
+	cout << get<0>(t1) << " ";
+	cout << get<1>(t1) << " ";
+	cout << get<2>(t1) << " ";
+	cout << endl;
+	
+	//create tuple with make_tuple
+	//-auto declares t2 with type of right-hand side
+	//-thus,type of t2 is tuple
+	auto t2 = make_tuple(22, 44, "nico");
 
+	//assign second value in t2 to t1
+	get<1>(t1) = get<1>(t2);
 
+	//comparison and assignment
+	//-including type conversion rom tuple<int,int,const char*>
+	//to tuple<int,float,string>
+	if (t1 < t2)
+	{
+		t1 = t2;
+	}
+}
+    下面的语句建立起一个异质的四元素tuple:
+        tuple<string,int,int,comlex<double>> t;
+    每个元素的内容由default构造函数初始化。基础类型都被初始化为0（这项保证始自C++11）。
+    下面的语句
+    tuple<int,float,string> t1(41,6.3,"nico");
+    建立并初始化一个异质的三元素tuple。 
+    你也可以使用make_tuple()建立tuple,其所有元素类犁都自动推导自其初值。举个例子，你可使用一下语句建立和初始化一个元素类型分别为int、int和const char*的tuple。
+        make_tuple(22,44,"nico")
+    注意，tuple的元素类型可以使reference。例如：
+    string s;
+    tuple<string&> t(s);        //first element of tuple t refers to s
+
+    get<0>(t) = "hello";        //assign"hello" to s
+
+    Tuple不是寻常的容器，不允许迭代元素。对于tuple可以使用其成员函数来处理元素，因此必须在编译期知道你打算处理的元紊的索引值。例如你可以这样处理tuple tl的第一元素 
+    get<0>(tl) 
+    运行期才传入一个索引值是不被允许的： 
+        int i; 
+        get<i>(tl)    //compile-time error:i is no compile-time value 
+    好消息是，万一传入无效索引，编译器会报错： 
+        get<3>(tl)    //compile-time error if tl has only three elements 
+    此外，tuple还提供惯常会有的拷贝、赋值和比较（copy，assignment，and comparison) 操作。 它们身上都允许发生隐式类型转换（因为采用member template)，但元素个数必须绝对吻合。如果两个tuple的所有元素都相等，它们就整体相等。检查某个tuple是否小于另一个 tuple,采用的是lexicographical (字典编纂式的)比较法则。 
+    表5.2列出了 tuple提供的所有操作。 
+
+便捷函数make_tuple()和tie() 
+
+    便捷函数make _tuple()会根据value建立tuple,不需要明确指出元素的类型。例如 make_tuple(22,44,"nico") 
+    建立并初始化了一个tuple,其相应的三个元素类型是int、int和const  char*。 
+    借由特别的函数对象reference_wrapper<>及便捷函数ref()和cref() (都是自C++11起被定义干〈functional〉），你可以影响make_tuple()产生的类型，例如以下表达式产出的tuple带有一个reference指向变量或对象s: 
+    string s; 
+    make_tuple(ref(s))    //yields type tuple<string&>, where the element refers to s
+
+    如果你打算改动tuple内的一个既有值，上述就很重要： 
+    //我个人觉得这么描述更直观
+    std::string s = "start";
+
+	auto x = std::make_tuple(s);        //x is of type tuple<string>
+	std::get<0>(x) = "my value";        //modifies x but not s
+
+	cout << get<0>(x) << endl;	        
+	cout << s << endl;                  
+
+	auto y = std::make_tuple(ref(s));   //y is of type tuple<string&>,thus y refers to s 
+	std::get<0>(y) = "my value";        //modifies y
+
+	cout << get<0>(y) << endl;	
+	cout << s << endl;
+
+    输出结果：
+        my value
+        start
+        my value
+        my value
+    运用reference搭配make_tuple()，就可以提取tuple的元素值，将某些变量值社给它们，
+    例如以下例子:
+        std:：tuple <int,float,std::string> t(77,1.1,"more light")； 
+        int i; 
+        float f； 
+        std::string s; 
+        //assign values of to i,f, and s: 
+        std::make_tuple(std::ref(i),std::ref(f),std::ref(s)) = t;
+
+    如果想最方便地在tuple中使用reference，可选择tie()，它可以建立一个内含reference的tuple:
+        std:：tuple <int,float,std：:string> t(77,l.l,"more light")； 
+    int i; 
+    float f； 
+    std::string s; 
+    std::tie(i,f ,s) = t;  //assignsvaluesofttoi,f,ands
+    这里的std::tie(i,f,s)会以i、f和s的reference建立起一个tuple,因此上述赋值操作其实就是将t内的元素分别賦值为Ti、f和s。 
+    使用tie()时，std::ignore允许我们忽略tuple的某些元素，也就是我们吋以用它来局部提取tuple的元素值： 
+    std::tuple <int,float,std：:string> t(77,1.1,"more light")； 
+    int i; 
+    std::string s; 
+    std::tie(i ,std::ignore,s)= t;  //assigns first and third value of t to i and s
+
+Tuple和初值列（Initializer List）
+    各个构造函数中，“接受不定个数的实参”的版本被声明为explicit:
+    namespace std { 
+        template <typename... Types> 
+        class tuple { 
+            public: 
+                explicit tuple(const Tyoes&...); 
+                template <typename... UTypes> explicit tuple(UTypes&&...);
+                ...
+        };
+    }
+    这是为了避免单一值被隐式转换为“带着一个元素”的 tuple：
+        template<typename... Args>
+        void foo(const std::tuple<Args...> t);
+
+        foo(42);                    //ERROR: explicit conversion to typle<> required
+        foo(make_tuple(42));        //OK
 
 
 
