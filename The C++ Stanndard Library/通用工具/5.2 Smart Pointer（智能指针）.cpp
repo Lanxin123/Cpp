@@ -134,8 +134,127 @@ int main()
         std:：shared_ptr<int> p(new int[10], 
                                 std::default_delete<int[]>())； 
     然而请注意，shared_ptr和unique_ptr以稍稍不同的方式处理deleter。例如unique_ptr允许你只传递对应的元素类作为template实参，但这对shared_ptr就不可行：
+        std::unique_ptr<int [] > p(new int [10])； //OK 
+        std::shared_ptr<int [] > p(new int [10])； //ERROR:   does not compile 
+    此外，对于unique_ptr，你必须明确给予第二个template实参，指出你自己的deleter: 
+        std:：unique_ptr<int,void(*)(int*)> p(new int[10], 
+                                                    [](int* p) { 
+                                                        delete[] p; 
+                                                    });
+    也请注意，shared_ptr不提供operator[]。至于unique_ptr,它有一个针对array的偏特化版本，该版本提供operator[]取代operator*和operator->。之所以有此差异是因为，unique_ptr在效能和弹性上进行优化。
 
+其他析构策略
 
+    最末一个拥有者---亦即shared pointer---结束生命时，如果清理工作不仅仅是删除内存，你必须明确给出自己的deleter。你可以指定属于自己的析构策略。
+    第一个例子：假设我们想确保“指向某临时文件”之最末一个reference被销毁时，该文件即被移除。可以这么做：
+#include "stdafx.h"
+#include <string>
+#include <fstream>  //for ofstream
+#include <memory>   //for shared_ptr
+#include <cstdio>   //for remove()
+using namespace std;
+
+class FileDeleter
+{
+private:
+	std::string filename;
+public:
+	FileDeleter(const std::string& fn)
+		: filename(fn){
+	}
+	void operator() (std::ofstream* fp) {
+		fp->close();										//close.file
+		std::remove(filename.c_str());		//delete.file
+	}
+};
+
+int main()
+{
+	//create and open temporary file:
+	std::shared_ptr<std::ofstream>fp(new std::ofstream("tmpfile.txt"),
+		FileDeleter("tmpfile.txt"));
+	
+}
+    以上，首先初始化一个shared_ptr，令它指向一个new新建的输出文件。传进去的FileDeleter负责确保一件事：与此shared pointer的最末一个拷贝失去此输出文件的拥有权时，该文件将被关闭并被<cstdic> 提供的C标准函数remove()移除。
+    由于remove()需要文件名，所以我们以文件名为实参传给FileDeleter的构造函数。 
+    第二个例子展示了如何使用shared_ptr处理共享内存（shared  memory)：
+//此文件只可以在linux环境下运行
+#include<memory>        //for shared_ptr
+#include<sys/mman.h>    //for shared memory
+#include<fcntl.h>
+#include<unistd.h>
+#include<cstring>       //for strerror()
+#include<cerrno>        //for errno
+#include<string>
+#include<iostream>
+class SharedMemoryDetacher
+{
+    public:
+        void operator() (int* p){
+            std::cout<<"unlink/tmp1234"<<std::endl;
+            if(shm_unlink("/tmp1234") !=0){
+                std::cerr<<"OOPS: shm_unlink() failed"<<std::endl;
+            }
+        }
+};
+
+std::shared_ptr<int> getSharedIntMemory(int num)
+{
+    void* mem;
+    int shmfd = shem_open("/tmp1243",O_CREAT|O_RDWR,S_IRWXU|S_IRWXG);
+    if(shmfd<0){
+        throw std::string(strerror(errno));
+    }
+
+    if(ftruncate(shmfd,num*sizeof(int))==-1){
+        throw std::string(strerror(errno));
+    }
+    mem = mmap(nullptr,num*sizeof(int),PROT_READ|PROT_WRITE,
+                MAP_SHARED,shmfd,0);
+    if(mem == MAP_FAILED){
+        throw std::sting(strerror(errno));
+    }
+    return std::shared_ptr<int>(static_cast<int*>(mem),
+                                SharedMemoryDetacher());
+}
+
+int main()
+{
+    //get and attach shared memory for 100 ints:
+    std::shared_ptr<int> smp(getSharedIntMemory(100));
+
+    //init the shared memory
+    for(int i=0;i<100;i++)
+        smp.get()[i] = i*42;
+    
+    //deal with shared memory somewhere else:
+    std::cout<<"<return>"<<sd::endl;
+    std::cin.get();
+
+    //release shared memory here:
+    smp.reset();
+}
+
+    首先定义一个 deleter SharedMemoryDetacher,用来卸除（detach) shared memory。这个 deleter 会释放被 getSharedlntMemory() 取得并附着（attach) 的shared memory。
+    为确保这 个deleter会在shared memory最末一次被使用后被调用，我们在“getSharedIntMemory() 为已附着内存建立起一个Shared_ptr” 时把它当作第二实参传递： 
+        return std::shared_ptr<int>(static_cast<int*>(mem), 
+                                    SharedMemoryDetacher()) ； //calls shmdt() 
+    也可以改用lambda (以下略过前缀std::): 
+        return shared_ptr<int>(static_cast<int*>(mem), 
+                            [](int *p) { 
+                                cout <<"unlink /tmpl234" << endl;
+                                if(shm_unlink("/tmp1234") !=0){
+                                    std::cerr<<"OOPS: shm_unlink() failed"<<std::endl;
+                                 });
+    注意，传入的deleter不允许抛出异常，因此这电我们只写出一个错误信息给std::cerr。 由于shm_unlink()的签名式相符，所以你甚至可直接使用shm_unlink()作为deleter如果你不打算检查其返回值的话： 
+        return std:：shared_ptr<int>(static_cast<int*>(mem), 
+                            shm_nnliiik)； 
+    注意，shared_ptr只提供operator *和operator->，指针运算和operator[]都末提供。因此，如果想访问内存，你必须使用get()获得被shared_ptr包覆（wrapped)的内部指针，提供完全的指针语义： 
+        smp.get()[i] = i» 4 2 ; 
+    上述结果等同于以下调用： 
+        (&*smp)[i] = i*42; 
+    对于上述两个例子，另一个实现技术也件更千净利落：只建立一个new class X, 让其构造函数执行初始工作，让其析构函数执行清理工作。然后你就只是使用shared_ptr每以new建立的class X对象。这样的好处是，你可定义一个更直观的接口，
+    例如为一个表现shared memory的对象定义一个operator []。然而随后你应该谨慎地想想copy和assignment操作， 如果不能肯定，就禁用（disable) 它们。
 
 
 
