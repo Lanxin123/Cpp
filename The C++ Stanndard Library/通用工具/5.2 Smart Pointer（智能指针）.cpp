@@ -640,6 +640,73 @@ Class unique_ptr 的目的
     up2 = std::move(up1);          //assign the unique_ptr
     这里的move assignment将拥有权由up1移交给up2.于是up2拥有了先前被up1拥有的对象。
     
+    如果上述赋值动作之前up2原本拥有对象，会有一个delete动作被调用，刪除该对象： 
+    //initialize a unique_ptrwith a new object 
+    std::unique_ptr<ClassA> up1(new ClassA); 
+    //initialize another unique_ptr with a new object 
+    std::unique_ptr<ClassA> up2(new ClassA)； 
+
+    up2 = std::move(up1);           //move assign the unique_ptr
+                                    //~delete object owned by up2
+                                    //~transfer ownership from up1 to up2
+    赋值nullptr也是可以的，和调用reset()效果相同： 
+    up = nullptr; //deletes the associated object、if any 
+源头和去处（Source and Sink) 
+    拥有权的移转暗暗指出了 unique-ptr的一种用途：函数可利用它们将拥有权转移给其他函数。这会发生在两种情况下： 
+    1.函数是接收端。如果我们将一个由std::move()建立起来的unique_ptr以rvalue reference身份当作函数实参，那么被调用函数的参数将会取得unique _ptr的拥有权。因此，如果该函数不再转移拥有权，对象会在函数结束时被deleted: 
+    void sink (std::unique_ptr<ClassA> up)    //sink() gets ownership
+    {
+        ...
+    }
+
+    std::unique_ptr<ClassA> up(new ClassA);
+    ...
+    sink(std::move(up));    //up loses ownership
+    ...
+    2.函数是供应端。当函数返回一个unique_ptr，其拥有扠会转移至调用端场景（calling context）内。下面的例子展示了这项技术： 
+    std::unique_ptr<ClassA> source()
+    { 
+        std::unique_ptr<ClassA> ptr (new ClassA); //ptr owns the new object 
+        ...
+        return ptr;                 //transfer owenership to calls function
+    }
+
+    void g()
+    {
+        std::unique_ptr<ClassA> p;
+
+        for(int i = 0;i < 10;i++){
+            p = source();       //p gets ownership of the returned object
+                                //(previously returned object of f() gets deleted)
+            ...
+        }
+    }//last-owned object of p gets deleted
+    每当source()被调用，就会以new创建对象并返回给调用者，夹带着其拥有权。返问值被陚值给P，于是拥有权也被移转给P。在循环的第二次迭代中，对p陚值导致p先前拥有的对象会被删除。一旦g()结束，p被销毁，导致最后一个由p拥有的对象被析构。
+    无论如何都不会发生资源泄露。即使抛出异常，任何拥有数据的unique _ptr也能 确保数据被删除。 
+    在这里，sourceO的return语句不需要std::move()的原因是，C++ll语言规定, 编译器应该自动尝试加上move。 
+
+unique_ptr被当作成员 
+    在class内使用unique_ptr可避免资源泄漏。如果你使用unique_ptr取代寻常pointer,就不再需要析构函数，因为对象被删除会连带使所有成员被删除。此外unique_ptr也可协助避免“对象初始化期间因拋出异常而造成资源泄漏”。
+    注意，只有当一切构造动作都完成了，析构函数才有可能被调用。因此一旦构造期间发生异常，只有那些已完全构造好的对象，其析构函数才会被调用。所以，对于“拥有多个raw pointer”的class，如果构造期间第一个new成功而第二个失败，就可能导致资源泄漏。例如：
+
+class ClassB { 
+    private： 
+        ClassA* ptrl;   //pointer members
+        ClassA* ptr2;   
+    public:
+        //constructor that initializes the pointers 
+        //-will causere source leak if second new throws 
+ClassB (int vail, int val2) 
+    :ptr1(new ClassA(vail)), ptr2(new ClassA(val2)) { 
+    }
+        //copy constructor 
+        //-might cause resource leak if second new throws 
+ClassB (const ClassB& x) 
+: ptr1 (new ClassA(*x.ptrl)), ptr2(new ClassA(*x.ptr2)) { 
+    }
+
+
+
 
 
 
