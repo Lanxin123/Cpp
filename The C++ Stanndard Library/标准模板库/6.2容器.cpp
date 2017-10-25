@@ -181,17 +181,124 @@ int main()
 	}
 	cout << endl;
 }
+    就像先前的例子一样，头文件<list>内含list的声明。以下定义一个“元素类型为字符”的list： 
+    list<char> coll; 
+    为了打印所有元素，我使用一个range-based for循环，这种循环自C++11之后提供，允许对每个元素执行指定的语句。List并不提供作为“元素直接访问”之用的操作符[]。这是因为list并不提供随机访问，因此操作符[]会带来低下的效率。 
+    在此循环中，当前正被处理的coll元素的类型被声明为auto。因此elem的类型被自动推导为char，因为coll是个char集合（auto 类型推导详见3.1.2节第14页）。另一种做法是明白声明elem的类型： 
+    for (char elem ： coll) { 
+        ...
+    }
+    注意，elem永远是当前正被处理的元素的一个拷贝（copy)。虽然你可以改动它，但其影响只限于“针对此元素而调用的语句”，coll内部并没有任何东西被改动。如果你想改动传入的集合的元素，你必须将elem声明为一个非常量的reference: 
+    for (auto& elem : coll) { 
+    ...  //any modification of elem modifies the current element in coll 
+    就像函数参数那样，通常你应该使用一个常量reference以避免发生一次copy操作。因此,下面的function template输出“被传入的容器内的所有元素”： 
+    template <typename T> 
+    void printElements (const T& coll) 
+    for (const auto& elem : coll) { 
+        std::cout << elem << std::endl；
+    } 
+    在C++11之前你必须使用迭代器来访问所有元素。稍后才会介绍迭代器。
+    在C++11之前，打印所有元素的另一种做法（不使用迭代器）是逐一地“打印而后移 除”第一元素，直到此list之中不再有任何元素： 
+
+#include "stdafx.h"
+#include <list>
+#include <iostream>
+using namespace std;
+
+int main()
+{
+	list<char> coll;		//list container for character elements
+
+	//append elements from'a' to 'z'
+	for (char c = 'a'; c <= 'z'; ++c) {
+		coll.push_back(c);
+	}
+
+	//print all elements
+	//~while there are elements
+	//~print and remove the first element
+	while (!coll.empty())
+	{
+		cout << coll.front() << ' ';
+		coll.pop_front();
+	}
+	cout << endl;
+}
+
+    成员函数empty()的返回值告诉我们容器中是否还有元素。只要这个函数返回false(也就是说，容器内还有元素），循环就继续进行： 
+    while (!coll .empty()) { 
+        ...
+    }
+    循环之内，成员函数front()返回第一个元素： 
+    cout << coll.front() << ' '； 
+    pop_front()函数删除第一个元素： 
+    coll.pop_front()； 
+    注意，pop_front()并不会返回被删除元素，所以你无法将上述两个语句合而为一。 
+    程序的输出结果取决于所用的字集。如果是ASCII字集，输出如下： 
+    a...z//就是a到z
+
+Forward List 
+
+    自C++11之后，C++标准库提供了另一个list容器：forward list。 forward_list<>是一个由元素构成的单向（singly) linked list。 就像寻常list那样，每个元素有自己一段内存， 为了节省内存，它只指向下一元素。
+    因此，forward list原则上就是一个受限的list,不支持任何“后退移动”或“效率低下”的操作。基于这个原因，它不提供成员函数如push_back()乃至size()。因此，list
+    现实中，这个限制比乍听之下甚至更尴尬棘手。问题之一是，你无法查找某个元素然后删除它，或是在它的前面安插另一个元素。因为，为了删除某个元素，你必须位于其前一元素的位置上，因为正是那个元素才能决定一个新的后继元素。
+    也因此，forward list对此 提供了一个特殊成员函数，见7.6.2节第305页。
+        下面是forward list的一个小例子:
+#include "stdafx.h"
+#include <forward_list>
+#include <iostream>
+using namespace std;
+
+int main()
+{
+	//create forward-list container for some prime numbers
+	forward_list<long> coll = { 2,3,5,7,11,13,17 };
+
+	//resize two times
+	//- note: poor performance
+	coll.resize(9);
+	coll.resize(10, 99);
+
+	//print all elements:
+	for (auto elem : coll)
+	{
+		cout << elem << ' ';
+	}
+	cout << endl;
+}
+    一如以往，我们使用forward list的头文件<forward_list>定义一个类型为forward_list的集合，以长整数（long integer） 为元素，并以若干质数为初值： 
+    forward_list<long> coll = { 2, 3， 5, 7, 11, 13, 17 >; 
+    然后使用resize()改变元素个数。如果数量成长，你可以传递一个额外参数，指定新元素值。否则就使用默认值（对基础类型而言是0)。注意，resize()是一个昂贵的动作，
+    它具备线性复杂度，因为为了到达尾端你必须一个一个元素地前进，走遍整个list。不过这是一个几乎所有sequence容器都会提供的操作，就暂时忽略它那可能的低劣效率吧。
+    只有array不提供resize()，因为其大小固定不变。 
+        像先前对待list那样，我们使用一个range-based for循环打印所有元素。输出如下： 
+        2 3 5 7 11 13 17 0 0 99
+
+关联式容器（Associative Container) 
+    关联式容器依据特定的排序准则，自动为其元素排序。元素可以是任何类型的value，也可以是key/value pair，其中key可以是任何类型，映射至一个相关value，而value也可以是任意类型。
+    排序准则以函数形式呈现，用来比较value,或比较key/value中的key。默认情况下所有容器都以操作符<进行比较，不过你也可以提供自己的比较函数，定义出不同的排序准则。 
+    通常关联式容器由二叉树（binary tree) 实现出来。在二叉树中，每个元素（节点）都有一个父节点和两个子节点；左子树的所有元素都比自己小，右子树的所有元素都比自己大。
+    关联式容器的差别主要在于元素的种类以及处理重复元素时的方式（态度)。 
+    关联式容器的主要优点是，它能很快找出一个具有某特定value的元素，因为它具备对数复杂度（logarithmic complexity）, 而任何循序式容器的复杂度是线性。
+    因此，使用关联式 容器，面对1000个元素，平均而言你将有10次而不是500次比较动作。然而它的一个缺点是，你不能直接改动元素的value,因为那会破坏元素的自动排序。 
+        下面是STL定义的关联式容器： 
+    Set元素依据其value自动排序，每个元素只能出现一次，不允许重复。 
+    
+    Multiset和set的唯一差别是：元素可以重复。也就是multiset可包括多个“value相同”的元素。 
+    
+    Map每个元素都是key/value pair,其中key是排序准则的基准。每个key只能出现一次，不允许重会。Map也可被视为一种关联式数组（associative array），也就是“索引可为任意类型”的数组。 
+    
+    Multimap和map的唯一差别是：元素可以重复，也就是multimap允许其元素拥有相同的key。Multimap可被当作字典（dictionary)使用。 
+
+    所有关联式容器都有一个可供选择的template实参，指明排序准则：默认采用操作符 <。排序准则也被用来测试等同性（equivalence）: 如果两个元素的value/key互不小干对方，则两者被视为重复。 
+    你可以将set视为一种特殊的map:元素的value等同于key。实际产品中所有这些关联式容器通常都由二叉树（binary  tree） 实现而成。 
+
+Set 和 MuUiset 实例 
+
+    下面是第一个例子，使用multiset:
 
 
-
-
-
-
-
-
-
-
-
+        
 
     
 
