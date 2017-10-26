@@ -296,6 +296,326 @@ int main()
 Set 和 MuUiset 实例 
 
     下面是第一个例子，使用multiset:
+#include "stdafx.h"
+#include <string>
+#include <set>
+#include <iostream>
+using namespace std;
+
+int main()
+{
+	multiset<string> cities{
+		"Braunschweig","Hanover","Frankfurt","New York",
+		"Chicago","Toronto","Paris","Frankfurt"
+	};
+	
+	//print each element:
+	for (const auto& elem:cities)
+	{
+		cout << elem << "	";
+	}
+	cout << endl;
+
+	//insert additional values:
+	cities.insert({ "London","Munich","Hanover","Braunschweig" });
+
+	//print each element:
+	for (const auto& elem: cities)
+	{
+		cout << elem << "	";
+	}
+	cout << endl;
+
+}
+
+    包含头文件<set>后，我们可以声明cities是个以string为元素的multiset: 
+        multiset<string> cities 
+    声明之后，若干字符串以初值列（initializer list）形式成为元素初值并于稍后被安插到容器内。为打印所有元素，我们使用一个range-based for循环。
+    注意我们声明元素为const auto&,意思是希望从容器推断元素类型并免除为“被此循环叫唤”的每个元素制造一份拷贝。 
+    在这个容器内部，所有元素都已经过排序，、因此第一份输出如下： 
+    Braunschweig  Chicago  Frankfurt  Frankfurt  Hanover  New York 
+    Paris  Toronto 
+    第二份输出如下： 
+    Braunschweig   Braunschweig  Chicago  Frankfurt  Frankfurt  Hanover  Hanover  London  Munich  New York  Paris  Toronto
+    如你所见，由于这里用的是一个multiset而不是set，因此允许元素重复。如果我们生命的是set而不是multiset，每个value就指挥被打印一次。
+    如果我们用的是一个unordered multiset,元素的次序就无法明确得知了。
+
+Map和Multimap实例
+    下面的例子示范了如何使用map和multimap:
+#include "stdafx.h"
+#include <string>
+#include <map>
+#include <iostream>
+using namespace std;
+
+int main()
+{
+	multimap<int, string> coll;		//container for int/string values
+
+	//insert some elements in arbitrary order
+	//- a value with key 1 gets insert twice
+	coll = { {5,"tagged"},
+	{2,"a"},
+	{1,"this"},
+	{4,"of"},
+	{1,"is"},
+	{3,"multimap"} };
+
+	//print all element values
+	//- element member second is the value
+	for (auto elem : coll)
+	{
+		cout << elem.second << ' ';
+	}
+	cout << endl;
+}
+    包含<amp>之后，我们声明一个map，其元素拥有一个int作为key和一个string作为value：
+        multimap<int,string> coll;
+    由于map和multimap的元素都是key/value pair，因此声明式、元素安插、元素访问等动作略有不同:
+    •首先，为了初始化（或赋值或安插）元素，你必须传递key/value pair,本例以嵌套式初值列（nested initializerlist）完成，
+     内层定义的是每个元素的key和value，外层定义出所有元素。因此{5,"tagged"}具体指明被安插的第一个元素内容。 
+    •处理元素时你再一次需要和key/value pair打交道。每个元素的类型实际上是pair<const key,value>。Key之所以必须是常量，因为其内容如果被改动，会破坏元素的次序，
+     而元素次序是由容器自动排序的。由于pair缺乏output操作符，你无法视它们为一个整体加以打印。因此你必须分别处理pair结构中的成员，他们分别名为first和second。
+        下面的式子取得key/value pair的第二成分，也就是multimap元素的value：
+        elem.second
+        下面的式子取得key/value pair的第一成分，也就是multimap元素的key:
+        elem.first
+    最终，程序输出如下：
+        this is a multimap of tagged strings
+    C++11之前并未明确规定等效元素（equivalent element，也就是key相同的元素）的排列次序。所以在C++11之前，"this"和"is"的排列有可能与本书所显示的不同。但是
+    C++11已经保证，新插入元素会被安插在multiset和multimap已有之等效元素的末尾。而且如果调用insert()、emplace()或erase()，这些等效元素的次序也保证稳定不变。
+
+关联式容器的其他例子 
+
+    6.2.4节第185页有一个示例，使用map做成一个所谓的关联式数組（associative array)。7.7节详细讨论set和multiset,附有更多例子。7.8节详细讨论map和multimap，也带有更多例子。 
+    Multimap也可以用作字典（dictionary)。7.8.5节第348页有一个例子。
+
+无序容器（Unordered Container）
+
+    在无序（unordered）容器中，元素没有明确的排列次序。也就是如果安插3个元素，当你迭代容器内的所有元素时会发现，它们的次序有各种可能。如果安插第4个元素，
+    先前3个元素的相对次序可能会被改变。我们唯一关心的是，某个特定元素是否位于容器内。甚至如果你有2个这种容器，其内有着完全相同的元素，元素的排列次序也可能不同。试着想象它是个袋子（bag)。 
+    无序（unordered） 容器常以hash table实现出来（如图6.3所示），内部结构是一个“由 linked list组成”的array。通过某个hash函数的运算，确定元素落于这个array的位置。 
+    Hash函数运算的目标是：让每个元素的落点（位置）有助于用户快速访问。
+
+    任何一个元素，前提则是hash函数本身也必须够快。由于这样一个快速而完美的hash函数不一定存在（或不一定被你找到），抑或由于它造成 array 耗费巨额内存而显得不切实际，
+    因此，退而求其次的hash函数有可能让多个元素落于同一位置上。所以设计上就让array的元素再被放进一个linked list中，如此一来array的每个位置（落点）就得以存放一个以上的元素。
+    无序（unordered）容器的主要优点是，当你打算査找一个带某特定值的元素，其速度甚至可能快过关联式容器。事实上无序容器提供的是摊提的常量复杂度（amortized constant complexity），
+    前提是你有一个良好的hash函数。然而提供一个良好的hash函数并非易事，你可能需要提供许多内存怍为bucket。 
+        根据关联式容器的分类法，STL定义出下面这些无序容器：
+    Unordered set是无序元素的集合，其中每个元素只可出现一次。也就是不允许元素重复。
+    
+    Unordered multiset和unordered set的唯一差别是它允许元素重复。也就是unordered multiset可能内含多个有着相同value的元素。 
+    
+    Unordered map的元素都是key/value pair。每个key只可出现一次，不允许重复。它也 可以用作关联式数组（associativearray),那是“索引可为任意类型”的array (详见6.2.4 节第185页)。 
+    
+    Unordered multimap 和 unordered map 的唯一差别是允许重复。也就是 unordered multimap 可能内含多个“拥有相同key”的元素。它可以用作字典（dictionary）。
+
+    所有这些无序容器的class 都有若干可有可无的template实参，用来指明hash函数和等效准则（equivalence critieion），该准则被用来寻找给定值，以判断是否重复。默认的等效准则是操作符==。
+    你可以把unordered set视为一种特殊unordered map，只不过其元素的value等同于key。现实中所有无序容器通常都使用hash table作为底层实现。
+
+Unordered Set/Multiset 实例 
+    下面是第一个例子，使用unordered multiset，元素是string:
+#include "stdafx.h"
+#include <unordered_set>
+#include <string>
+#include <iostream>
+using namespace std;
+
+int main()
+{
+	unordered_multiset<string> cities{
+		"Braunschweig","Hanover","Frankfurt","New York",
+		"Chicago","Toronto","Paris","Frankfurt"
+	};
+
+	//print each element:
+	for (const auto& elem : cities) {
+		cout << elem << "  ";
+	}
+	cout << endl;
+
+	//inset additional values:
+	cities.insert({ "London","Munich","Hanover","Braunschweig" });
+
+	//print each element:
+	for (const auto& elem : cities) {
+		cout << elem << "	";
+	}
+	cout << endl;
+}
+    包含必要的头文件
+        #include<unordered_set>
+    后，我们可以声明一个“元素为string”的unordered set 并给予初值：
+        unordered_multiset<string> cities{...};
+    现在如果打印所有元素，出现的次序可能不同于程序中所给的次序，因为其次序是不明确的。唯一保证的是重复元素---者的却有可能因为我们用的是multiset---以其安插次序被组合在一起（因此其相对次序永远不变）。
+    
+    而任何安插动作都有可能改变这种次序，事实上任何操作只要可能引发rehashing就可能改变上述次序。
+    次序究竟会不会变化，或变成怎样，取决于rehashing策略，而它在某种程度上可被程序猿影响。例如你可以保留足够空间，使得知道出现一定量的元素才发生rehashing。此外，
+    为确保你在处理所有元素的同时还可以删除元素，C++ standard 保证，删除元素不会引发rehashing。但是删除之后的一次安插动作就可能引发rehashing。
+
+    再次提醒，在C++11之前，你必须使用迭代器访问元素。//所以这成为了传统风格了吗。。。
+
+Unordered Map 和 Multimap 实例 
+    出现于第179页的例子是针对multimap设计的，却也适用于unordered multimap，只要你在include指示符中以unordered_map替换map并在容器声明式中以unordered_multimap替换multimap： 
+    #include <unordered_map> 
+    ...
+    unordered_multimap<int,string〉coll；
+    ... 
+    唯一的不同是，本例的元素次序不明确。然而在大多数平台上，元素仍会被排序，因为默 认是以modulo操作符作为hash函数。把“排序后的次序”（sorted order)视为“不明确次 序”（undefined order)当然合法。不过上述的“排序”现象并不保证一定会有，而且如果你 添加更多元素，元素的次序也将可能不同。 
+    下面是另一个unordered map例子。此例使用的unordered map,其key是个string而其 value 是个 double: 
+#include "stdafx.h"
+#include <unordered_map>
+#include <string>
+#include <iostream>
+using namespace std;
+
+int main()
+{
+	unordered_map<string, double> coll{ {"tim",9.9},
+										{"struppi",11.77}
+									   ;
+
+	//suqare the value of each element:
+	for (pair<const string, double>& elem : coll) {
+		elem.second *= elem.second;
+	}
+
+	//print each element(key and value):
+	for (const auto& elem : coll) {
+		cout << elem.first << " ：" << elem.second << endl;
+	}
+}
+    包含必要的map、sting和iostream头文件后，我们声明一个unordered map，并以两个元素作为初始元素。这里运用了嵌套式初值列（nested initializer list），所以
+        {"tim",9.9}
+    和
+        {"struppi",11.77}
+    是被用来初始化map的两个元素。
+        接下来，对每个元素的value执行平方运算：
+        for(pair<const string,double>& elem : coll){
+            elem.second *= elem.second;
+        }
+    我要再一次提示你，看得出来元素类型是由constant string和double组成的pair<>。因此我们无法改动元素的key,也就是其first成员： 
+    for (pair<const string,double>& elem : coll) { 
+        elem. first = ...;  // ERROR: keys^jfa mapare constant 
+    }
+    像此前很多例子一样，自C++11 开始，我们不再需要明白指出元素类型，因为在一个range-based for循环内，类型可被推到出来（根据容器）。基于此，
+    负责输出所有元素的第二循环中使用auto。事实上，由于声明elem为const auto&，我们得以避免产生很多拷贝（copy）:
+    for(const auto& elem : coll){
+        cout<<elem.first<<": "<<elem.second<<endl;
+    }
+    这个程序的一个可能的输出是：
+        struppi: 138.533
+        tim: 98.01
+    但不保证如此，因为实际次序不明确（无序）。如果我们改用一个寻常的map，就能保证 “带着key "struppi"” 的元素必定在“带着key"tim"” 的元素之前,
+    因为map会以key为 根据对元素排序，而"struppi"小于"tim"。7.8.5 节第345页有另一个例子，使用map并以STL算法和lambda取代range-based for循环。
+
+Unordered容器的其他例子
+    所有无序（unordered） 容器都提供若干可有可无的template实参，用来指明诸如hash函数和等效比较式（equivalence comparison）。
+    标准库为基础类型和string准备了一个默认的hash 函数，至于其他类型，我们必须提供自己的hash函数。
+    下一节有个例子使用map作为所谓的关联式数组（associative array）。7.9 节详细讨论 unordered容器并附带其他例子。Unordered multimap也可用作字典（dictionary) ( 7.9.7节第383页有一个例子)。
+
+关联式数组（Associative Array）
+
+    不论map或unordered map，都是key/value pair形成的集合，每个元素带着独一无二的key。如此的集合也可被视为一个关联式数组（associate array），也就是“索引并非整数”的array。
+    也因此，刚才说的两个容器都提供了下标操作符[]。
+        考虑下面这个例子：
+#include "stdafx.h"
+#include <unordered_map>
+#include <string>
+#include <iostream>
+using namespace std;
+
+int main()
+{
+	//type of the container: 
+	// - unordered_map: elements are key/value pairs 
+	//- string: keys have type string 
+	//- float: values have type float 
+	unordered_map<string, float> coll;
+
+	//insert some elements into the collection
+	//- using the synatx of an associative array
+	coll["VAT1"] = 0.16;
+	coll["VAT2"] = 0.07;
+	coll["Pi"] = 3.1415;
+	coll["an arbitrary number"] = 4983.223;
+	coll["Null"] = 0;
+
+	//change value
+	coll["VAT1"] += 0.03;
+
+	//print difference of VAT values
+	cout << "VAT difference:  " << coll["VAT1"] - coll["VAT2"] << endl;
+
+}
+    声明容器类型时，必须同时指明key的类型和value的类型： 
+    unordered_map<string,float> coil; 
+    这意味着key是string而相关联的value是浮点数。 
+    根据associative array的观念，你可以使用下标操作符[]访问元素。然而请注意，这个操作符的行为和寻常array的下标操作符不太一样：其索引不是整数，它接受一个新索引 (或曰key)并以此建立和安插一个新元素，
+    该元素以该索引为key。因此你绝不能给予一个无效索引。 
+    也就是说，此程序中的
+        coll["VAT1"] = 0.16;
+    语句乃是建立一个新元素，其key为"VAT1"而其value为0.16。 
+    事实上，下面的这个式子会建立起一个新元素，拥有key "VAT1"并将value设为默认值（使用default构造函数:如果是基础类型则初值为0): 
+        coll["VATl"] 
+    而稍早那整个语句会访问此新元素的value,于是赋值操作符对它陚值0.16。 
+    自C++11开始，你也可以使用at()访问元素的value，只要传给它key就行。这种情况下如果容器内找不到给定的key,会导致一个out_of_range异常： 
+        coll at(“VAT1“) =0.16; //out_of_range exceptionifnoelementfound 
+    语句 
+        coll["VATl"] += 0.03;   
+    或 
+        coll["VATl"] - coll["VAT2"] 
+    获得的是对元素的value的激写权力。最终，程序输出如下： 
+    VAT difference: 0.12
+    一如以往，使用unordered map和使用map的差异在于，元素在unordered map内的次序有各种可能，但元素在map内一定是被排序过的。
+    但由于unordered map的操作属于“摊提式常置”（amortized constant)复杂度，map提供的则是“对数复杂度”，所以通常你宁可使用unordered map而放弃map，
+    除非你需要排序，或你的环境不支持C++11特性以至于无法使用unordered map。这种情况下只需改变容器类型：将include指示符和容器声明中的unordered.拿掉即可。 
+    7.8.3节第343页和7.9.5节第374页分别更详细地讨论了如何以map和unordered-map做出一个关联式数组（associative array）。
+
+其他容器
+String 
+    你可以把string当作一种STL容器。说到string我指的是C++ stringclass (basic_string<>、 string和wstring))对象，第13章会介绍它们。String很类似vector，但其元素都是字符。 13.2.14节第684页对此有更详细的说明。 
+
+寻常的 C-Style Array 
+    //没删的页码一定要看哦。。。。
+    另一种容器由C/C++语言内核提供，是个type而不是个class: 那就是寻常的array,或所谓的C-style array。声明它时应该给予一个固定大小，或一个来自malloc()或realloc()的动态大小。然而这种寻常array并不是STL容器，
+    因为它们不提供成员函数如size()和 empty()。尽管如此，STL算法还是可以作用在它们身上。 
+    寻常array的用法一点都不新奇。唯一的新亮点就是可以把算法作用于它们身上。 7.10.2节第386页会进行解释。 
+    C++程序不再需要直接使用C-style array。Vector和array提供了寻常C-style array的所有特性，并具备更安全更方便的接口。详见7.2.3节第267页和7.3.3节第278页。 
+
+用户自定义容器（User-Defined Container) 
+
+    现实中你可以给予任何“与容器相仿（comainer-like)的对象” 一个相应的STL接口，使它得以迭代元素，或提供标准操作以运用元素内容。例如你可以引入一个class用以表现目录(directory),而你能够迭代其中各文件，视它们为元素并操纵运用它们。
+    STL-container-like 接口的最佳候选是7.1节第254页所列的那些共通的容器操作。 
+    不过，某些container-like对象无法与STL概念相呼应。例如“STL容器有一个起头和一个结尾”这一概念就令环式容器（circlular container,例如ring buffer）很难融入STL框架。
+
+容器适配器（Container Adpter）
+    
+    除了以上数个根本的容器类，为满足特殊需求，C++标准库还提供了一些所谓你的容器适配器，它们也是预定义的容器，提供的是一定限度的接口，用以应付特殊需求。这些容器适配器都是根据基本容器实现而成，包括： 
+    Stack名字足以说明一切。Stack容器对元桌采取LIFO (后进先出）管理策略。 
+    Queue对元素釆取FIFO (先进先出）管理策略。也就是说，它是个寻常的缓冲区 (buffer)。 
+    Priority queue其内的元素拥有各种优先权。所谓优先权乃是基于程序员提供的排序准则（默认为操作符 <）而定义。这种特殊容器的效果相当于这样一个缓冲区：“下一元素永远是容器中优先权最髙的元素”。如果同时有多个元素最高优先权，则其次序无明确定义。 
+    从历史观点来看，容器适配器是STL的一部分。从程序猿的观点来看，它们只不过是一种 特别的容器类，使用“由STL提供的容器、迭代器和算法所形成的总体框架”。因此，容器适配器被我当作STL内核的外围，直到第12章才介绍。
+
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
         
