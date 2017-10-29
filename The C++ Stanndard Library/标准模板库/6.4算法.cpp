@@ -252,9 +252,77 @@ int main()
         }
     被用作一个准则，允许查找第一个“带有value 25 或 value35”的元素。6.9节第229页已介绍过如何在STL中使用lambda，10.3节第499页有更详细的讨论。
     
+处理多重区间（Multiple Ranges）
+    有数个算法可以（或说需要）同时处理多重区间。通常你必须设定第一个区间的起点和终点，至干其他区间，只需设定起点即可，终点通常可由第一区间的元素数量推导出来。例如以下程序片段中，equal()从头开始逐一比较coll1和coll2的所有元素：
+    if(equal(coll1.begin(),coll1.end(), //first range
+              coll2.begin())){          //second range
+                  ...                   
+              }
+    于是，coll2之中之中参与比较的元素数量，间接取决于coll1内的元素数量，间接取决于coll1内的元素数量（如图6.9所示）。
+    这是我们收获一个重要心得：如果某个算法用来处理多重区间，那么当你调用它时，务必确保第二（以及其他）区间所拥有的元素个数至少和第一区间所拥有的元素个数至少和第一区间内的元素个数相同。特别是执行涂写动作时，务必确保目标区间够大。
+    考虑下面这个程序：
+#include "stdafx.h"
+#include <algorithm>
+#include <list>
+#include <vector>
+using namespace std;
+
+int main()
+{
+	list<int> coll1 = { 1,2,3,4,5,6,7,8,9 };
+	vector<int> coll2;
+
+	//RUTIME ERROR:
+	//-overwrites nonexisting elements in the destination
+	copy(coll1.cbegin(), coll1.cend(),	//source
+		coll2.begin());	//destination
+    ...
+}
+    这里调用了copy()算法，将第一区间内的全部元素拷贝至目标区间。如上所述，第一区间的起点和终点都已指定，第二区间只指出起点。然而，由于该算法执行的是覆写动作(overwrite)而非安插动作（insert） , 所以目标区间必须拥有足够的元素被覆写，
+    否则就会像这个例子一样，导致不明确行为。如果目标区间内没有足够的元素供覆写，通常意味着你会覆写co112.end()之后的任何东西，幸运的话程序立即崩溃---这起码还能让你知道出错了。你可以强制自己获得这种幸运：使用STL安全版本。在这样的版本中所有不明确行为都会被导向一个错误处理程序（error-handling procedure）。见6.12.1节第247页。 
+
+    想要避免上述错误，你可以（1）确认目标区间内有足够的元素空间，或是（2）采用insert iterator。Insert iterator将在6.5.1节第210页介绍。我首先解释如何修改目标区间使它拥有足够空间。
+    为了让目标区间够大，你要不一开始就给它一个正确大小，要不就显式变更其大小。 这两个办法都只适用于序列式容器（vector 、deque 、list 和forward_list)。关联式容器根本不会有此问题，因为关联式容器不可能被当作覆写式算法（overwriting algorithm) 的操作目标（原因见6.7.2节第221页)。以下例子展示了如何扩充容器大小： 
+#include "stdafx.h"
+#include <algorithm>
+#include <list>
+#include <vector>
+#include <deque>
+using namespace std;
+
+int main()
+{
+	list<int> coll1 = { 1,2,3,4,5,6,7,8,9 };
+	vector<int> coll2;
+
+	//resize destination to have enough room for the overwriting algorithum
+	coll2.resize(coll1.size());
+
+	//copy elements from first into second collection 
+	//-overwrites existing elements in destination
+	copy(coll1.cbegin(), coll1.cend(),		//source
+		coll2.begin());									//destination
+
+	//create third collection with enough room
+	//-initial size is passed as parameter
+	deque<int> coll3(coll1.size());
+
+	//copy elements from first into third collection
+	copy(coll1.cbegin(), coll1.cend(),		//source
+		coll3.begin());									//destination
+}
+    在这里，resize()的作用是改变coll2的元素个数：
+        coll2.resize(coll.size());
+    coll3则是在初始化时就指明要有足够空间，以容纳coll1中的全部元素：
+        deque<int> coll3(coll1.size());
+    注意，这两种方式都会产出新元素并赋予初值。这些元素由default构造函数初始化，没有任何实参。你可以传递额外的实参给构造函数和resize()，这样就可以按你的意愿将新元素初始化。
 
 
 
 
+
+
+
+    
 
 
